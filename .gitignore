@@ -1,0 +1,6 @@
+# Ignore virtualenv stuff
+Email/*
+# Ignore emacs backups
+*~
+# Ignore pdfs
+*.pdf
