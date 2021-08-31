@@ -1,11 +1,13 @@
 ### Standard Libraries ###
 import functools
 import imaplib
+import smtplib
 import ssl
 import email
 import base64
 import io
 import os
+import re
 
 ### Third-Party Libraries ###
 import PyPDF4
@@ -165,25 +167,83 @@ def match(pdf_texts, pattern):
     return [line for page in pdf_texts for line in page
             if re.search(pattern, line)]
 
+def write_email(filename, frm, to):
+    """Create an EmailMessage object from a text file
+
+    Usage:
+    write_email(filename, from, to):
+        filename -- the name of the text file containing the email
+        from -- the address of the sender
+        to -- the address of the recipient
+
+    Returns an EmailMessage object using the contents of the text file.
+    The text file has the subject on the first line, followed by a
+    blank line, followed by the text of the email.
+    """
+
+    email_msg = email.message.EmailMessage()
+    email_msg["From"] = frm
+    email_msg["To"] = to
+    with open(filename, "r", encoding = "utf-8") as f:
+       email_text = f.read()
+    email_text = email_text.split("\n")
+    email_msg["Subject"] = email_text[0]
+    text = "\n".join(email_text[1:])
+    email_msg.set_content(text)
+    return email_msg
+
 ### Main Entry Point ###
 if __name__ == "__main__":
     # Read in environment variables
-    HOST = os.environ['PYTHON_EMAIL_HOST']
-    IMAP_PORT = os.environ['PYTHON_IMAP_PORT']
-    USER = os.environ['PYTHON_EMAIL_USER']
-    PASSWD = os.environ['PYTHON_EMAIL_PASSWD']
-    INBOX = os.environ['PYTHON_EMAIL_INBOX']
-    PATTERN = os.environ['PYTHON_REGEX_PATTERN']
-
+    HOST = os.environ['PYTHON_EMAIL_HOST'].strip("\"")
+    IMAP_PORT = int(os.environ['PYTHON_IMAP_PORT'])
+    SMTP_PORT = int(os.environ['PYTHON_SMTP_PORT'])
+    USER = os.environ['PYTHON_EMAIL_USER'].strip("\"")
+    PASSWD = os.environ['PYTHON_EMAIL_PASSWD'].strip("\"")
+    INBOX = os.environ['PYTHON_EMAIL_INBOX'].strip("\"")
+    PATTERN = os.environ['PYTHON_REGEX_PATTERN'].strip("\"")
+    RECIPIENT = os.environ['PYTHON_EMAIL_RECIPIENT'].strip("\"")
+    
     # Connect to host and download unseen emails
+    print(f'Connecting to the IMAP server {HOST} at port {IMAP_PORT}')
     connection = imaplib.IMAP4(HOST, IMAP_PORT)
     connection.starttls(ssl.create_default_context())
+    print(f'Authenticating as user {USER}')
     connection.login(USER, PASSWD)
+    print(f'Selecting inbox {INBOX}')
     connection.select(INBOX)
+    print('Fetching unread emails')
     emails = fetch_emails(connection, '(UNSEEN)')
     connection.close()
+    print('Logging out!')
     connection.logout()
 
-    # Find matching texts
-    pdf_texts = extract_text(extract_pdfs(emails))
-    matches = match(pdf_texts, PATTERN)
+    if emails:
+        # Find matching texts
+        print('Finding any pdfs in unread emails')
+        pdfs = extract_pdfs(emails)
+        if pdfs:
+            print('Extracting text from pdfs')
+            pdf_texts = extract_texts(pdfs)
+            print(f'Attempting to match text to regex {PATTERN}')
+            matches = match(pdf_texts, PATTERN)
+            
+            # If there are matches, send an email to a recipient
+            if matches:
+                print('Matches found!')
+                email_msg = write_email("emailText.txt", USER, RECIPIENT)
+                print(f'Connecting to SMTP server {HOST} at port {SMTP_PORT}')
+                smtp_connection = smtplib.SMTP(HOST, SMTP_PORT)
+                smtp_connection.starttls()
+                print(f'Authenticating as user {USER}')
+                smtp_connection.login(USER, PASSWD)
+                print('Sending email')
+                smtp_connection.send_message(email_msg)
+                print('Logging off!')
+                smtp_connection.quit()
+            else:
+                print('No matches found!')
+        else:
+            print('No PDFS found!')
+    else:
+        print(f'No unread emails in the inbox {INBOX}')

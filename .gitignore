@@ -4,3 +4,5 @@ Email/*
 *~
 # Ignore pdfs
 *.pdf
+# Ignore text files
+*.txt
