@@ -145,7 +145,7 @@ def extract_text(pdf_list):
     comprised of one string for each line of text on a pdf page.
     """
     
-    pdf_pages = [pdf.getPage(i) for pdf in pdfs
+    pdf_pages = [pdf.getPage(i) for pdf in pdf_list
                  for i in range(0, pdf.getNumPages())]
     pdf_text = [page.extractText().split('\n') for page in pdf_pages]
     return pdf_text
@@ -168,15 +168,15 @@ def match(pdf_texts, pattern):
 ### Main Entry Point ###
 if __name__ == "__main__":
     # Read in environment variables
-    HOST = os.environ.get['PYTHON_EMAIL_HOST']
-    PORT = os.environ.get['PYTHON_EMAIL_PORT']
-    USER = os.environ.get['PYTHON_EMAIL_USER']
-    PASSWD = os.environ.get['PYTHON_EMAIL_PASSWD']
-    INBOX = os.environ.get['PYTHON_EMAIL_INBOX']
-    PATTERN = os.environ.get['PYTHON_REGEX_PATTERN']
+    HOST = os.environ['PYTHON_EMAIL_HOST']
+    IMAP_PORT = os.environ['PYTHON_IMAP_PORT']
+    USER = os.environ['PYTHON_EMAIL_USER']
+    PASSWD = os.environ['PYTHON_EMAIL_PASSWD']
+    INBOX = os.environ['PYTHON_EMAIL_INBOX']
+    PATTERN = os.environ['PYTHON_REGEX_PATTERN']
 
     # Connect to host and download unseen emails
-    connection = imaplib.IMAP4(HOST, PORT)
+    connection = imaplib.IMAP4(HOST, IMAP_PORT)
     connection.starttls(ssl.create_default_context())
     connection.login(USER, PASSWD)
     connection.select(INBOX)
