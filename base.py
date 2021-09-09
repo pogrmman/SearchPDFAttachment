@@ -224,7 +224,7 @@ if __name__ == "__main__":
         pdfs = extract_pdfs(emails)
         if pdfs:
             print('Extracting text from pdfs')
-            pdf_texts = extract_texts(pdfs)
+            pdf_texts = extract_text(pdfs)
             print(f'Attempting to match text to regex {PATTERN}')
             matches = match(pdf_texts, PATTERN)
             
